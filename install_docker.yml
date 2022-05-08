@@ -1,0 +1,64 @@
+---
+- name: Install Docker on Ubuntu
+  hosts: all
+  become: true
+
+  tasks:
+
+  # Bind non-root username to the variable
+  # Helpful when {{ ansible_user_id }} returns "root"
+
+  - name: get the non root remote user
+    set_fact:
+      remote_regular_user: "{{ ansible_env.SUDO_USER or ansible_user_id }}"
+
+  # Install Docker
+
+  - name: install prerequisites
+    apt:
+      name:
+        - apt-transport-https
+        - ca-certificates 
+        - curl 
+        - gnupg-agent
+        - software-properties-common
+      state: latest
+      update_cache: yes
+
+  - name: add apt-key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: add docker repo
+    apt_repository:
+      repo: deb https://download.docker.com/linux/ubuntu focal stable
+      state: present
+
+  - name: install docker 
+    apt:
+      name: 
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+      state: present
+      update_cache: yes
+
+  - name: Add user to the docker group
+    ansible.builtin.user:
+      name: "{{ remote_regular_user }}"
+      groups: docker
+      append: yes
+
+  # Install Docker SDK
+
+  - name: install python package manager
+    apt:
+      name: python3-pip
+  
+  - name: install python sdk
+    become_user: "{{ remote_regular_user }}"
+    pip:
+      name:
+        - docker
+        - docker-compose

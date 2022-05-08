@@ -1,0 +1,23 @@
+---
+- name: Run a container
+  hosts: all
+
+  tasks:
+
+  # Similar to <docker run -p 9000:80 -d nginxdemos/hello>
+  # Runs nginx demo at port 9000
+  # Demo page should be accessible at http://x.x.x.x:9000
+  # x.x.x.x is an ip address of the server
+
+  - name: Run the container
+    community.docker.docker_container:
+      name: demo
+      image: nginxdemos/hello
+      state: started
+      ports:
+        - 9000:80
+
+  # - name: Pull an image
+  #   community.docker.docker_image:
+  #     name: ubuntu
+  #     source: pull

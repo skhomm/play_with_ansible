@@ -1,0 +1,44 @@
+---
+- name: Run a container
+  hosts: all
+  vars:
+    OVPN_DATA: ovpn-data-example
+    PKI_PASSWORD: Kakoolya
+    COMMON_NAME: Smoothvpn
+
+  tasks:
+
+  - name: Create a volume
+    docker_volume:
+      name: "{{ OVPN_DATA }}"
+
+  - name: Set server address
+    community.docker.docker_container:
+      name: closedvpn
+      image: kylemanna/openvpn
+      volumes: 
+        - "{{ OVPN_DATA }}:/etc/openvpn"
+      command: "ovpn_genconfig -u udp://51.250.76.113"
+      auto_remove: true
+  
+  - name: Create PKI
+    ansible.builtin.expect:
+      command: docker run -v ovpn-data-example:/etc/openvpn --rm -it kylemanna/openvpn ovpn_initpki
+      responses:
+        Confirm removal: "no"
+        Enter New CA Key Passphrase: "{{ PKI_PASSWORD }}"
+        \[Easy-RSA CA\]: "{{ COMMON_NAME }}"
+        Enter pass phrase for /etc/openvpn/pki/private/ca.key: "{{ PKI_PASSWORD }}"
+      timeout: 60
+    ignore_errors: true
+
+  - name: Run the container
+    community.docker.docker_container:
+      name: openvpn_kylemanna
+      image: kylemanna/openvpn
+      state: started
+      ports:
+        - 1194:1194/udp
+      volumes: 
+        - "{{ OVPN_DATA }}:/etc/openvpn"
+      capabilities: NET_ADMIN

@@ -14,7 +14,7 @@
 
   tasks:
 
-  - name: Show host's ip
+  - name: Show server address
     debug:
       msg: "{{ ansible_host }}"
 
@@ -41,7 +41,7 @@
         Enter New CA Key Passphrase: "{{ PKI_PASSWORD }}"
         \[Easy-RSA CA\]: "{{ COMMON_NAME }}"
         Enter pass phrase for /etc/openvpn/pki/private/ca.key: "{{ PKI_PASSWORD }}"
-      timeout: 60
+      timeout: 120
     ignore_errors: true
 
   - name: Start OpenVPN server process in the container

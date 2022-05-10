@@ -1,0 +1,33 @@
+---
+- name: Generate and retrieve client certificate
+  hosts: all
+
+  vars:
+    OVPN_DATA: ovpn-data-kylemanna
+    # PKI_PASSWORD: SomeP@$$w0rd
+
+  vars_prompt:
+    - name: CLIENTNAME
+      prompt: Enter client name
+      private: no
+    - name: PKI_PASSWORD
+      prompt: Enter CA Key Passphrase
+
+  tasks:
+
+  # Requires python pexpect module installed on the host
+
+  - name: Generate client certificate
+    ansible.builtin.expect:
+      command: "docker run -v {{ OVPN_DATA }}:/etc/openvpn --rm -it kylemanna/openvpn easyrsa build-client-full {{ CLIENTNAME }} nopass"
+      responses:
+        Enter pass phrase for /etc/openvpn/pki/private/ca.key:  "{{ PKI_PASSWORD }}"
+
+  - name: Retrieve client certificate
+    ansible.builtin.shell:
+      cmd: "docker run -v {{ OVPN_DATA }}:/etc/openvpn --rm kylemanna/openvpn ovpn_getclient {{ CLIENTNAME }} > {{ CLIENTNAME }}.ovpn"
+
+  - name: Copy certificate to the local /tmp/fetched
+    ansible.builtin.fetch:
+      src: "{{ CLIENTNAME }}.ovpn"
+      dest: /tmp/fetched/

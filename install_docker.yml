@@ -14,7 +14,7 @@
 
   # Install Docker
 
-  - name: install prerequisites
+  - name: Install prerequisites
     apt:
       name:
         - apt-transport-https
@@ -25,17 +25,17 @@
       state: latest
       update_cache: yes
 
-  - name: add apt-key
+  - name: Add apt-key
     apt_key:
       url: https://download.docker.com/linux/ubuntu/gpg
       state: present
 
-  - name: add docker repo
+  - name: Add docker repo
     apt_repository:
       repo: deb https://download.docker.com/linux/ubuntu focal stable
       state: present
 
-  - name: install docker 
+  - name: Install docker 
     apt:
       name: 
         - docker-ce
@@ -50,15 +50,21 @@
       groups: docker
       append: yes
 
+  # Reset current session in order to apply group change immediately
+
+  - name: Reset ssh connection
+    meta: reset_connection
+
   # Install Docker SDK
 
   - name: install python package manager
     apt:
       name: python3-pip
   
-  - name: install python sdk
+  - name: Install python sdk
     become_user: "{{ remote_regular_user }}"
     pip:
       name:
         - docker
         - docker-compose
+        - pexpect

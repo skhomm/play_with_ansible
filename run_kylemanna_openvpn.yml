@@ -1,29 +1,41 @@
 ---
-- name: Run a container
+- name: Deploy kylemanna/openvpn (OpenVPN in a container)
   hosts: all
+
   vars:
-    OVPN_DATA: ovpn-data-example
-    PKI_PASSWORD: Kakoolya
-    COMMON_NAME: Smoothvpn
+    OVPN_DATA: ovpn-data-kylemanna
+    # PKI_PASSWORD: SomeP@$$w0rd
+    COMMON_NAME: openvpn
+    SERVER_ADDRESS: "{{ ansible_host }}"
+
+  vars_prompt:
+    - name: PKI_PASSWORD
+      prompt: Enter CA Key Passphrase
 
   tasks:
+
+  - name: Show host's ip
+    debug:
+      msg: "{{ ansible_host }}"
 
   - name: Create a volume
     docker_volume:
       name: "{{ OVPN_DATA }}"
 
-  - name: Set server address
+  - name: Generate config and set the server address
     community.docker.docker_container:
-      name: closedvpn
+      name: generate_ovpn_config
       image: kylemanna/openvpn
       volumes: 
         - "{{ OVPN_DATA }}:/etc/openvpn"
-      command: "ovpn_genconfig -u udp://51.250.76.113"
+      command: "ovpn_genconfig -u udp://{{ SERVER_ADDRESS }}"
       auto_remove: true
-  
+
+  # Requires python pexpect module installed on the host
+
   - name: Create PKI
     ansible.builtin.expect:
-      command: docker run -v ovpn-data-example:/etc/openvpn --rm -it kylemanna/openvpn ovpn_initpki
+      command: docker run -v {{ OVPN_DATA }}:/etc/openvpn --rm -it kylemanna/openvpn ovpn_initpki
       responses:
         Confirm removal: "no"
         Enter New CA Key Passphrase: "{{ PKI_PASSWORD }}"
@@ -32,7 +44,7 @@
       timeout: 60
     ignore_errors: true
 
-  - name: Run the container
+  - name: Start OpenVPN server process in the container
     community.docker.docker_container:
       name: openvpn_kylemanna
       image: kylemanna/openvpn

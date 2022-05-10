@@ -1,4 +1,12 @@
 ---
+# Play uses the host address {{ ansible_host }}
+# as OpenVPN server address.
+# So, better use syntax like this:
+# ansible-playbook run_kylemanna_openvpn.yml -i x.x.x.x, -u username
+# instead of this:
+# ansible-playbook run_kylemanna_openvpn.yml -i username@x.x.x.x
+# or {{ ansible_host }} will return unusable value
+
 - name: Deploy kylemanna/openvpn (OpenVPN in a container)
   hosts: all
 
@@ -31,18 +39,28 @@
       command: "ovpn_genconfig -u udp://{{ SERVER_ADDRESS }}"
       auto_remove: true
 
+  - name: Check if PKI already exists
+    
+    ansible.builtin.shell:
+      cmd: "docker run -v {{ OVPN_DATA }}:/etc/openvpn --rm 
+        kylemanna/openvpn test -f /etc/openvpn/pki/ca.crt"
+    register: pki_status
+    # ignore_errors: yes
+    failed_when: pki_status.rc == 2
+
   # Requires python pexpect module installed on the host
 
   - name: Create PKI
     ansible.builtin.expect:
-      command: docker run -v {{ OVPN_DATA }}:/etc/openvpn --rm -it kylemanna/openvpn ovpn_initpki
+      command: "docker run -v {{ OVPN_DATA }}:/etc/openvpn --rm -it 
+        kylemanna/openvpn ovpn_initpki"
       responses:
-        Confirm removal: "no"
+        Confirm removal: "no" # Just in case, it should be handled by pki_status
         Enter New CA Key Passphrase: "{{ PKI_PASSWORD }}"
         \[Easy-RSA CA\]: "{{ COMMON_NAME }}"
         Enter pass phrase for /etc/openvpn/pki/private/ca.key: "{{ PKI_PASSWORD }}"
       timeout: 120
-    ignore_errors: true
+    when: pki_status.rc != 0
 
   - name: Start OpenVPN server process in the container
     community.docker.docker_container:
